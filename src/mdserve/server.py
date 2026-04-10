@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 from pathlib import Path
 
 import markdown
@@ -16,6 +17,25 @@ CONTENT_DIR: Path = Path.cwd()
 PICO_CSS = "https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
 
 MD_EXTENSIONS = ["tables", "fenced_code", "toc", "sane_lists", "smarty"]
+
+_LIST_RE = re.compile(r"^(\s*)([-*+]|\d+\.)\s")
+
+
+def _ensure_blank_line_before_lists(text: str) -> str:
+    """Insert a blank line before a list that immediately follows a non-list line.
+
+    Python-markdown requires a blank line between a paragraph and a list;
+    without it the list markers are swallowed into the paragraph text.
+    """
+    lines = text.split("\n")
+    result: list[str] = []
+    for i, line in enumerate(lines):
+        if i > 0 and _LIST_RE.match(line):
+            prev = lines[i - 1]
+            if prev.strip() and not _LIST_RE.match(prev):
+                result.append("")
+        result.append(line)
+    return "\n".join(result)
 
 app = FastAPI()
 
@@ -217,6 +237,7 @@ async def serve_md(request: Request, file_path: str):
         return HTMLResponse(render_page("<h1>404 - Not Found</h1>", "404", request.url.path), status_code=404)
 
     text = read_file(target)
+    text = _ensure_blank_line_before_lists(text)
     body_html = markdown.markdown(text, extensions=MD_EXTENSIONS)
     title = extract_title(target)
     return render_page(body_html, title, "/" + file_path)

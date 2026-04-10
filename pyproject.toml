@@ -1,6 +1,6 @@
 [project]
 name = "mdserve"
-version = "0.3.0"
+version = "0.4.0"
 description = "Minimal HTTP server that renders .md files as HTML using Pico CSS"
 readme = "README.md"
 requires-python = ">=3.14"
