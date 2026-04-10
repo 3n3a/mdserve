@@ -4,7 +4,13 @@
       "WebSearch",
       "Bash(uv init:*)",
       "Bash(uv add:*)",
-      "Bash(uv run:*)"
+      "Bash(uv run:*)",
+      "Bash(ls:*)",
+      "Bash(curl -s http://127.0.0.1:8125/)",
+      "Bash(curl -s http://127.0.0.1:8125/README.md)",
+      "Bash(curl -s -o /dev/null -w \"Status: %{http_code}\\\\n\" http://127.0.0.1:8125/CLAUDE.md)",
+      "Bash(curl -s -o /dev/null -w \"Status: %{http_code}\\\\n\" http://127.0.0.1:8125/nonexistent.md)",
+      "Bash(uv sync:*)"
     ]
   }
 }

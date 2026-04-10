@@ -4,20 +4,20 @@ from __future__ import annotations
 
 import argparse
 import os
-import re
-import urllib.parse
-from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 
 import markdown
+import uvicorn
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
 
-# The directory containing .md files (one level up from the repo root).
-# Layout: src/mdserve/server.py  →  .parent = src/mdserve  →  .parent = src
-#         →  .parent = repo root  →  .parent = content dir
-_DEFAULT_CONTENT_DIR = Path(__file__).resolve().parent.parent.parent.parent
-CONTENT_DIR: Path = _DEFAULT_CONTENT_DIR
+CONTENT_DIR: Path = Path.cwd()
 
 PICO_CSS = "https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+
+MD_EXTENSIONS = ["tables", "fenced_code", "toc", "sane_lists", "smarty"]
+
+app = FastAPI()
 
 
 def collect_md_files(directory: Path) -> dict[str, list[tuple[str, str, str]]]:
@@ -48,113 +48,130 @@ def extract_title(path: Path) -> str:
     return path.stem
 
 
+def read_file(path: Path) -> str:
+    """Read a file trying multiple encodings."""
+    for encoding in ("utf-8-sig", "utf-8", "latin-1"):
+        try:
+            return path.read_text(encoding=encoding)
+        except (UnicodeDecodeError, ValueError):
+            continue
+    return path.read_text(encoding="latin-1", errors="replace")
+
+
 def render_sidebar(current_path: str) -> str:
     """Build the sidebar navigation HTML."""
     folders = collect_md_files(CONTENT_DIR)
     parts: list[str] = []
-    parts.append('<nav id="sidebar">')
-    parts.append('<a href="/" class="logo"><strong>MD Viewer</strong></a>')
+    parts.append('<aside class="sidebar">')
+    parts.append('<a href="/" class="sidebar-logo"><strong>mdserve</strong></a>')
     for folder, files in folders.items():
-        heading = folder if folder else "Root"
-        parts.append(f"<details open><summary>{heading}</summary><ul>")
+        heading = folder if folder else "Files"
+        parts.append(f'<div class="sidebar-heading">{heading}</div><ul>')
         for _fname, title, url_path in files:
             active = ' class="active"' if url_path == current_path else ""
             parts.append(
                 f'<li><a href="{url_path}"{active}>{title}</a></li>'
             )
-        parts.append("</ul></details>")
-    parts.append("</nav>")
+        parts.append("</ul>")
+    parts.append("</aside>")
     return "\n".join(parts)
 
 
-def render_page(body_html: str, title: str, current_path: str) -> str:
-    sidebar = render_sidebar(current_path)
-    return f"""<!doctype html>
-<html lang="de" data-theme="light">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{title}</title>
-  <link rel="stylesheet" href="{PICO_CSS}">
-  <style>
-    body {{
+STYLE = """
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
       display: flex;
       min-height: 100vh;
       margin: 0;
-    }}
-    #sidebar {{
-      width: 320px;
-      min-width: 260px;
-      padding: 1.5rem 1rem;
+    }
+    .sidebar {
+      width: 260px;
+      flex-shrink: 0;
+      padding: 1.25rem 0.75rem;
+      background: var(--pico-card-background-color);
       border-right: 1px solid var(--pico-muted-border-color);
       overflow-y: auto;
       position: sticky;
       top: 0;
       height: 100vh;
-      font-size: 0.9rem;
-    }}
-    #sidebar .logo {{
+    }
+    .sidebar-logo {
       display: block;
-      margin-bottom: 1rem;
+      margin-bottom: 1.25rem;
+      padding: 0 0.5rem;
       font-size: 1.1rem;
       text-decoration: none;
-    }}
-    #sidebar details {{
-      margin-bottom: 0.25rem;
-      border: none;
-    }}
-    #sidebar summary {{
+      color: var(--pico-color);
+    }
+    .sidebar-logo:hover {
+      color: var(--pico-primary);
+    }
+    .sidebar-heading {
       font-weight: 600;
-      padding: 0.3rem 0;
-      font-size: 0.85rem;
+      font-size: 0.7rem;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.06em;
       color: var(--pico-muted-color);
-    }}
-    #sidebar ul {{
-      list-style: none;
-      padding-left: 0.5rem;
+      padding: 0.75rem 0.5rem 0.25rem;
       margin: 0;
-    }}
-    #sidebar li {{
+    }
+    .sidebar ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .sidebar li {
       margin: 0;
       padding: 0;
-    }}
-    #sidebar a {{
+    }
+    .sidebar li a {
       display: block;
-      padding: 0.25rem 0.5rem;
-      border-radius: 4px;
+      padding: 0.3rem 0.5rem;
+      border-radius: 6px;
       text-decoration: none;
       color: var(--pico-color);
+      font-size: 0.85rem;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-    }}
-    #sidebar a:hover,
-    #sidebar a.active {{
-      background: var(--pico-primary-focus);
-    }}
-    main {{
+    }
+    .sidebar li a:hover {
+      background: var(--pico-muted-border-color);
+    }
+    .sidebar li a.active {
+      background: var(--pico-primary-background);
+      color: var(--pico-primary-inverse);
+    }
+    main {
       flex: 1;
+      min-width: 0;
       padding: 2rem 3rem;
       max-width: 960px;
-      overflow-x: auto;
-    }}
-    main table {{
-      font-size: 0.88rem;
-    }}
-    @media (max-width: 768px) {{
-      body {{ flex-direction: column; }}
-      #sidebar {{
+    }
+    @media (max-width: 768px) {
+      body { flex-direction: column; }
+      .sidebar {
         width: 100%;
         height: auto;
         position: static;
         border-right: none;
         border-bottom: 1px solid var(--pico-muted-border-color);
-      }}
-      main {{ padding: 1rem; }}
-    }}
-  </style>
+      }
+      main { padding: 1rem; }
+    }
+"""
+
+
+def render_page(body_html: str, title: str, current_path: str) -> str:
+    sidebar = render_sidebar(current_path)
+    return f"""<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{title}</title>
+  <link rel="stylesheet" href="{PICO_CSS}">
+  <style>{STYLE}</style>
 </head>
 <body>
 {sidebar}
@@ -168,11 +185,11 @@ def render_page(body_html: str, title: str, current_path: str) -> str:
 def render_index() -> str:
     """Render the home page with a table of contents."""
     folders = collect_md_files(CONTENT_DIR)
-    parts: list[str] = ["<h1>Inhaltsverzeichnis</h1>"]
+    parts: list[str] = ["<h1>Table of Contents</h1>"]
     for folder, files in folders.items():
-        heading = folder if folder else "Stamm-Verzeichnis"
+        heading = folder if folder else "Files"
         parts.append(f"<h2>{heading}</h2>")
-        parts.append('<table role="grid"><thead><tr><th>Datei</th><th>Titel</th></tr></thead><tbody>')
+        parts.append('<table role="grid"><thead><tr><th>File</th><th>Title</th></tr></thead><tbody>')
         for fname, title, url_path in files:
             parts.append(
                 f'<tr><td><a href="{url_path}">{fname}</a></td>'
@@ -180,62 +197,39 @@ def render_index() -> str:
             )
         parts.append("</tbody></table>")
     body = "\n".join(parts)
-    return render_page(body, "Inhaltsverzeichnis", "/")
+    return render_page(body, "Table of Contents", "/")
 
 
-MD_EXTENSIONS = ["tables", "fenced_code", "toc", "sane_lists", "smarty"]
+@app.get("/", response_class=HTMLResponse)
+async def index():
+    return render_index()
 
 
-class Handler(BaseHTTPRequestHandler):
-    def do_GET(self) -> None:
-        parsed = urllib.parse.urlparse(self.path)
-        req_path = urllib.parse.unquote(parsed.path)
+@app.get("/{file_path:path}", response_class=HTMLResponse)
+async def serve_md(request: Request, file_path: str):
+    target = (CONTENT_DIR / file_path).resolve()
 
-        if req_path == "/" or req_path == "":
-            html = render_index()
-            self._respond(200, html)
-            return
+    # Path traversal protection
+    if not str(target).startswith(str(CONTENT_DIR.resolve())):
+        return HTMLResponse(render_page("<h1>403 Forbidden</h1>", "403", request.url.path), status_code=403)
 
-        # Map URL path to file
-        rel = req_path.lstrip("/")
-        file_path = CONTENT_DIR / rel
+    if not target.is_file() or target.suffix != ".md":
+        return HTMLResponse(render_page("<h1>404 - Not Found</h1>", "404", request.url.path), status_code=404)
 
-        if file_path.is_file() and file_path.suffix == ".md":
-            try:
-                text = file_path.read_text(encoding="utf-8")
-            except Exception as exc:
-                self._respond(500, render_page(f"<p>Error reading file: {exc}</p>", "Error", req_path))
-                return
-            body_html = markdown.markdown(text, extensions=MD_EXTENSIONS)
-            title = extract_title(file_path)
-            html = render_page(body_html, title, req_path)
-            self._respond(200, html)
-        else:
-            html = render_page("<h1>404 - Nicht gefunden</h1>", "404", req_path)
-            self._respond(404, html)
-
-    def _respond(self, code: int, html: str) -> None:
-        payload = html.encode("utf-8")
-        self.send_response(code)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.send_header("Content-Length", str(len(payload)))
-        self.end_headers()
-        self.wfile.write(payload)
-
-    def log_message(self, fmt: str, *args) -> None:
-        print(f"[{self.log_date_time_string()}] {fmt % args}")
+    text = read_file(target)
+    body_html = markdown.markdown(text, extensions=MD_EXTENSIONS)
+    title = extract_title(target)
+    return render_page(body_html, title, "/" + file_path)
 
 
 def main() -> None:
     global CONTENT_DIR
-
     parser = argparse.ArgumentParser(description="Serve .md files as HTML.")
     parser.add_argument(
         "content_dir",
         nargs="?",
-        type=Path,
-        default=_DEFAULT_CONTENT_DIR,
-        help="Directory containing .md files (default: parent of this script)",
+        default=None,
+        help="Directory to scan for .md files (default: current directory)",
     )
     parser.add_argument(
         "--port",
@@ -245,17 +239,13 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    CONTENT_DIR = args.content_dir.resolve()
+    if args.content_dir:
+        CONTENT_DIR = Path(args.content_dir).resolve()
 
     host = "127.0.0.1"
-    server = HTTPServer((host, args.port), Handler)
     print(f"Serving .md files from: {CONTENT_DIR}")
     print(f"Open http://{host}:{args.port}")
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        print("\nShutting down.")
-        server.server_close()
+    uvicorn.run(app, host=host, port=args.port, log_level="info")
 
 
 if __name__ == "__main__":

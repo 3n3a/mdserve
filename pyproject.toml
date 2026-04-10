@@ -1,11 +1,13 @@
 [project]
 name = "mdserve"
-version = "0.1.0"
+version = "0.3.0"
 description = "Minimal HTTP server that renders .md files as HTML using Pico CSS"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "fastapi>=0.115",
     "markdown>=3.10.2",
+    "uvicorn>=0.34",
 ]
 
 [project.scripts]

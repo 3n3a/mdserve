@@ -7,6 +7,7 @@ A minimal local web server that renders Markdown files as HTML with a sidebar na
 Requires [uv](https://docs.astral.sh/uv/).
 
 ```bash
+uv version --bump minor
 uv tool install .
 ```
 
