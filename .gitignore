@@ -1,10 +1,19 @@
-# Python-generated files
-__pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
+# Binaries
+/mdserve
+/mdserve.exe
+/dist/
 
-# Virtual environments
-.venv
+# Go
+*.test
+*.out
+vendor/
+
+# Downloaded at build time — never commit
+internal/assets/pico.min.css
+internal/assets/mermaid.min.js
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+.claude/*.local.json

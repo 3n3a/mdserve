@@ -10,7 +10,13 @@
       "Bash(curl -s http://127.0.0.1:8125/README.md)",
       "Bash(curl -s -o /dev/null -w \"Status: %{http_code}\\\\n\" http://127.0.0.1:8125/CLAUDE.md)",
       "Bash(curl -s -o /dev/null -w \"Status: %{http_code}\\\\n\" http://127.0.0.1:8125/nonexistent.md)",
-      "Bash(uv sync:*)"
+      "Bash(uv sync:*)",
+      "mcp__plugin_context-mode_context-mode__ctx_batch_execute",
+      "mcp__plugin_context-mode_context-mode__ctx_search",
+      "Bash(wsl *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git reset *)"
     ]
   }
 }

@@ -1,0 +1,13 @@
+{{define "sidebar"}}
+<aside class="sidebar">
+<a href="/" class="sidebar-logo"><strong>mdserve</strong></a>
+{{- range .Groups}}
+  <div class="sidebar-heading">{{if .Folder}}{{.Folder}}{{else}}Files{{end}}</div>
+  <ul>
+  {{- range .Entries}}
+    <li><a href="{{.URLPath}}"{{if eq .URLPath $.CurrentPath}} class="active"{{end}}>{{.Title}}</a></li>
+  {{- end}}
+  </ul>
+{{- end}}
+</aside>
+{{end}}
