@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"html/template"
 	"io/fs"
 	"net/http"
 	"os"
@@ -69,5 +70,5 @@ func (s *Server) errorPage(w http.ResponseWriter, _ *http.Request, status int, m
 	groups, _ := collector.Collect(s.opts.ContentDir)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
-	_ = render.RenderPage(w, http.StatusText(status), "<h1>"+message+"</h1>", "", groups, s.assetURLs())
+	_ = render.RenderPage(w, http.StatusText(status), template.HTML("<h1>"+template.HTMLEscapeString(message)+"</h1>"), "", groups, s.assetURLs())
 }
