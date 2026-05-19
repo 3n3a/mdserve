@@ -32,6 +32,13 @@ type pageData struct {
 	MermaidHref string
 }
 
+type loginData struct {
+	Title    string
+	Error    string
+	Next     string
+	PicoHref string
+}
+
 func RenderPage(w io.Writer, title string, body template.HTML, currentPath string, groups []collector.Group, urls AssetURLs) error {
 	return tmpl.ExecuteTemplate(w, "page.tmpl", pageData{
 		Title:       title,
@@ -50,4 +57,13 @@ func RenderIndex(w io.Writer, groups []collector.Group, urls AssetURLs) error {
 		return err
 	}
 	return RenderPage(w, "Table of Contents", template.HTML(body.String()), "/", groups, urls)
+}
+
+func RenderLogin(w io.Writer, errMsg, next string, urls AssetURLs) error {
+	return tmpl.ExecuteTemplate(w, "login.tmpl", loginData{
+		Title:    "Sign in — mdserve",
+		Error:    errMsg,
+		Next:     next,
+		PicoHref: urls.Pico,
+	})
 }

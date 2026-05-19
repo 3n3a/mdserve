@@ -27,6 +27,7 @@ type Options struct {
 type Server struct {
 	opts        Options
 	contentRoot string
+	secret      []byte
 }
 
 func New(opts Options) (http.Handler, error) {
@@ -34,19 +35,29 @@ func New(opts Options) (http.Handler, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Server{opts: opts, contentRoot: abs}
+	secret, err := newSessionSecret()
+	if err != nil {
+		return nil, err
+	}
+	s := &Server{opts: opts, contentRoot: abs, secret: secret}
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Logger)
-	if opts.User != "" {
-		r.Use(s.basicAuth)
-	}
 
-	r.Get("/", s.handleIndex)
+	r.Get("/login", s.handleLoginGet)
+	r.Post("/login", s.handleLoginPost)
+	r.Get("/logout", s.handleLogout)
 	r.Handle("/_assets/*", http.StripPrefix("/_assets/", http.FileServer(http.FS(assets.FS))))
-	r.Get("/*", s.handleFile)
+
+	r.Group(func(r chi.Router) {
+		if opts.User != "" {
+			r.Use(s.requireAuth)
+		}
+		r.Get("/", s.handleIndex)
+		r.Get("/*", s.handleFile)
+	})
 	return r, nil
 }
 

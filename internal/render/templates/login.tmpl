@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}}</title>
+  <link rel="stylesheet" href="{{.PicoHref}}">
+  <style>
+    body { display: flex; min-height: 100vh; align-items: center; justify-content: center; margin: 0; }
+    main { width: 100%; max-width: 360px; padding: 2rem; }
+    .error { color: var(--pico-del-color); margin-bottom: 1rem; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+<main>
+  <hgroup>
+    <h1>mdserve</h1>
+    <p>Sign in to continue</p>
+  </hgroup>
+  {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+  <form method="post" action="/login">
+    <input type="hidden" name="next" value="{{.Next}}">
+    <label>Username
+      <input type="text" name="user" required autofocus autocomplete="username">
+    </label>
+    <label>Password
+      <input type="password" name="pass" required autocomplete="current-password">
+    </label>
+    <button type="submit">Sign in</button>
+  </form>
+</main>
+</body>
+</html>

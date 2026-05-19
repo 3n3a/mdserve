@@ -70,4 +70,4 @@ Key behavior:
 - Hidden files/dirs (`.git`, `.github`, etc.) are skipped in the walk.
 - Goldmark renders fenced ` ```mermaid ` blocks as `<pre><code class="language-mermaid">…`; a regex post-pass rewrites them to `<pre class="mermaid">` so Mermaid.js can take over.
 - Asset URLs are computed once per request: CDN by default, `/_assets/…` (served from `embed.FS`) when `--offline` is set. CI fetches the real CSS/JS before building so released binaries always have them; the committed placeholders are zero-byte and trigger a startup warning if `--offline` is used without running the fetch script.
-- Basic auth (`--user` + `--pass`) wraps the entire router via `chi` middleware. Uses `subtle.ConstantTimeCompare`.
+- Auth (`--user` + `--pass`) is a login page + session cookie. `chi` middleware in `internal/server/auth.go` checks for a `mdserve_session` cookie (HMAC-SHA256 over an 8-byte expiry, signed with a per-process random secret). Unauthenticated requests redirect to `/login?next=...`. Public routes (no auth): `/login`, `/logout`, `/_assets/*`. Credential comparison uses `subtle.ConstantTimeCompare`.

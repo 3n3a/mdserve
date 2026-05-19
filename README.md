@@ -23,8 +23,8 @@ mdserve [flags] [content_dir]
 | `content_dir` (positional) | `.` | Directory to scan for `.md` files |
 | `--host` | `127.0.0.1` | Host to bind to. Use `0.0.0.0` to expose on the network. |
 | `--port` | `8000` | Port to listen on (also reads `$PORT`) |
-| `--user` | _(empty)_ | Basic-auth username. Enables auth when set. Also reads `$MDSERVE_USER`. |
-| `--pass` | _(empty)_ | Basic-auth password. Also reads `$MDSERVE_PASS`. |
+| `--user` | _(empty)_ | Login username. Enables the login page + session cookie when set. Also reads `$MDSERVE_USER`. |
+| `--pass` | _(empty)_ | Login password. Also reads `$MDSERVE_PASS`. |
 | `--offline` | `false` | Serve Pico CSS and Mermaid from the binary instead of the jsDelivr CDN. Also reads `$MDSERVE_OFFLINE`. |
 | `--version` | — | Print version and exit |
 
@@ -46,7 +46,7 @@ mdserve --offline
 
 ## Public exposure
 
-You can bind to a public interface and protect access with `--user`/`--pass`. This adds HTTP Basic Auth; over plain HTTP credentials are sent base64-encoded only — put it behind a TLS-terminating reverse proxy if you actually need security.
+You can bind to a public interface and protect access with `--user`/`--pass`. Setting both enables a login page (`GET /login`) and an HMAC-signed session cookie that lasts 24 hours. Sign out via `GET /logout`. Over plain HTTP the cookie and form submission are sent in cleartext — put it behind a TLS-terminating reverse proxy if you actually need security.
 
 **No warranty.** This tool was not designed as a hardened public service. Run it on the open internet at your own risk.
 
