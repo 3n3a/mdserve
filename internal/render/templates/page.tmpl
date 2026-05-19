@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}}</title>
+  <link rel="stylesheet" href="{{.PicoHref}}">
+  <style>{{.Style}}</style>
+  <script src="{{.MermaidHref}}"></script>
+  <script>mermaid.initialize({ startOnLoad: true });</script>
+</head>
+<body>
+{{template "sidebar" .}}
+<main>
+{{.Body}}
+</main>
+</body>
+</html>

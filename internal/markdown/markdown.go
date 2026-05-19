@@ -2,7 +2,7 @@ package markdown
 
 import (
 	"bytes"
-	"html"
+	"fmt"
 	"html/template"
 	"regexp"
 	"strings"
@@ -10,18 +10,22 @@ import (
 	"github.com/3n3a/mdserve/internal/collector"
 	"github.com/3n3a/mdserve/internal/fileio"
 	"github.com/yuin/goldmark"
+	highlighting "github.com/yuin/goldmark-highlighting/v2"
 	"github.com/yuin/goldmark/extension"
 	gmhtml "github.com/yuin/goldmark/renderer/html"
 )
 
 var (
-	listRE    = regexp.MustCompile(`^(\s*)([-*+]|\d+\.)\s`)
-	mermaidRE = regexp.MustCompile(`(?s)<pre><code class="language-mermaid">(.*?)</code></pre>`)
+	listRE         = regexp.MustCompile(`^(\s*)([-*+]|\d+\.)\s`)
+	mermaidBlockRE = regexp.MustCompile("(?ms)^```mermaid[ \\t]*\\r?\\n(.*?)\\r?\\n```[ \\t]*$")
 
 	md = goldmark.New(
 		goldmark.WithExtensions(
 			extension.GFM,
 			extension.Typographer,
+			highlighting.NewHighlighting(
+				highlighting.WithStyle("github"),
+			),
 		),
 		goldmark.WithRendererOptions(
 			gmhtml.WithXHTML(),
@@ -36,22 +40,37 @@ func Convert(path string) (template.HTML, string, error) {
 	}
 	text = ensureBlankLineBeforeLists(text)
 
+	text, mermaids := extractMermaid(text)
+
 	var buf bytes.Buffer
 	if err := md.Convert([]byte(text), &buf); err != nil {
 		return "", "", err
 	}
-	body := rewriteMermaid(buf.String())
+	body := reinjectMermaid(buf.String(), mermaids)
 	return template.HTML(body), collector.ExtractTitle(path), nil
 }
 
-func rewriteMermaid(htmlText string) string {
-	return mermaidRE.ReplaceAllStringFunc(htmlText, func(m string) string {
-		sub := mermaidRE.FindStringSubmatch(m)
+func extractMermaid(text string) (string, []string) {
+	var mermaids []string
+	out := mermaidBlockRE.ReplaceAllStringFunc(text, func(m string) string {
+		sub := mermaidBlockRE.FindStringSubmatch(m)
 		if len(sub) < 2 {
 			return m
 		}
-		return `<pre class="mermaid">` + html.UnescapeString(sub[1]) + `</pre>`
+		idx := len(mermaids)
+		mermaids = append(mermaids, sub[1])
+		return fmt.Sprintf("\n\n@@MDSERVE_MERMAID_%d@@\n\n", idx)
 	})
+	return out, mermaids
+}
+
+func reinjectMermaid(body string, mermaids []string) string {
+	for i, diag := range mermaids {
+		placeholder := fmt.Sprintf("<p>@@MDSERVE_MERMAID_%d@@</p>", i)
+		replacement := `<pre class="mermaid">` + diag + `</pre>`
+		body = strings.Replace(body, placeholder, replacement, 1)
+	}
+	return body
 }
 
 func ensureBlankLineBeforeLists(text string) string {

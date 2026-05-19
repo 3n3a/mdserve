@@ -41,7 +41,7 @@ func New(opts Options) (http.Handler, error) {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Logger)
 	if opts.User != "" {
-		r.Use(basicAuth(opts.User, opts.Pass))
+		r.Use(s.basicAuth)
 	}
 
 	r.Get("/", s.handleIndex)
