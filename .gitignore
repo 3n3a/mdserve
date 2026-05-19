@@ -16,3 +16,4 @@ internal/assets/mermaid.min.js
 .idea/
 .vscode/
 .DS_Store
+.claude/*.local.json
