@@ -40,6 +40,7 @@ func main() {
 	user := flag.String("user", os.Getenv("MDSERVE_USER"), "basic-auth username (or $MDSERVE_USER); enables auth when set")
 	pass := flag.String("pass", os.Getenv("MDSERVE_PASS"), "basic-auth password (or $MDSERVE_PASS)")
 	offline := flag.Bool("offline", envBool("MDSERVE_OFFLINE"), "serve Pico CSS and Mermaid from the binary instead of the CDN")
+	saveCheckboxes := flag.Bool("save-checkboxes", envBool("MDSERVE_SAVE_CHECKBOXES"), "persist task-list checkbox state to the browser's localStorage")
 	showVersion := flag.Bool("version", false, "print version and exit")
 
 	flag.Usage = func() {
@@ -72,10 +73,11 @@ func main() {
 	}
 
 	handler, err := server.New(server.Options{
-		ContentDir: abs,
-		User:       *user,
-		Pass:       *pass,
-		Offline:    *offline,
+		ContentDir:     abs,
+		User:           *user,
+		Pass:           *pass,
+		Offline:        *offline,
+		SaveCheckboxes: *saveCheckboxes,
 	})
 	if err != nil {
 		log.Fatalf("building server: %v", err)

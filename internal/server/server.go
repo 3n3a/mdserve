@@ -18,10 +18,11 @@ const (
 )
 
 type Options struct {
-	ContentDir string
-	User       string
-	Pass       string
-	Offline    bool
+	ContentDir     string
+	User           string
+	Pass           string
+	Offline        bool
+	SaveCheckboxes bool
 }
 
 type Server struct {
