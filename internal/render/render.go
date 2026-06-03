@@ -23,13 +23,14 @@ type AssetURLs struct {
 }
 
 type pageData struct {
-	Title       string
-	Body        template.HTML
-	CurrentPath string
-	Groups      []collector.Group
-	Style       template.CSS
-	PicoHref    string
-	MermaidHref string
+	Title          string
+	Body           template.HTML
+	CurrentPath    string
+	Groups         []collector.Group
+	Style          template.CSS
+	PicoHref       string
+	MermaidHref    string
+	SaveCheckboxes bool
 }
 
 type loginData struct {
@@ -39,15 +40,16 @@ type loginData struct {
 	PicoHref string
 }
 
-func RenderPage(w io.Writer, title string, body template.HTML, currentPath string, groups []collector.Group, urls AssetURLs) error {
+func RenderPage(w io.Writer, title string, body template.HTML, currentPath string, groups []collector.Group, urls AssetURLs, saveCheckboxes bool) error {
 	return tmpl.ExecuteTemplate(w, "page.tmpl", pageData{
-		Title:       title,
-		Body:        body,
-		CurrentPath: currentPath,
-		Groups:      groups,
-		Style:       template.CSS(styleCSS),
-		PicoHref:    urls.Pico,
-		MermaidHref: urls.Mermaid,
+		Title:          title,
+		Body:           body,
+		CurrentPath:    currentPath,
+		Groups:         groups,
+		Style:          template.CSS(styleCSS),
+		PicoHref:       urls.Pico,
+		MermaidHref:    urls.Mermaid,
+		SaveCheckboxes: saveCheckboxes,
 	})
 }
 
@@ -56,7 +58,7 @@ func RenderIndex(w io.Writer, groups []collector.Group, urls AssetURLs) error {
 	if err := tmpl.ExecuteTemplate(&body, "index.tmpl", pageData{Groups: groups}); err != nil {
 		return err
 	}
-	return RenderPage(w, "Table of Contents", template.HTML(body.String()), "/", groups, urls)
+	return RenderPage(w, "Table of Contents", template.HTML(body.String()), "/", groups, urls, false)
 }
 
 func RenderLogin(w io.Writer, errMsg, next string, urls AssetURLs) error {

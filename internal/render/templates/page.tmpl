@@ -9,10 +9,36 @@
   <script src="{{.MermaidHref}}"></script>
   <script>mermaid.initialize({ startOnLoad: true });</script>
 </head>
-<body>
+<body data-current-path="{{.CurrentPath}}" data-save-checkboxes="{{.SaveCheckboxes}}">
 {{template "sidebar" .}}
 <main>
 {{.Body}}
 </main>
+<script>
+(function () {
+  var boxes = document.querySelectorAll('main input[type="checkbox"]');
+  if (!boxes.length) return;
+  boxes.forEach(function (cb) { cb.disabled = false; });
+
+  if (document.body.dataset.saveCheckboxes !== 'true') return;
+
+  var storeKey = 'mdserve-tasks:' + document.body.dataset.currentPath;
+  var saved;
+  try { saved = JSON.parse(localStorage.getItem(storeKey) || '{}'); } catch (e) { saved = {}; }
+
+  var counts = {};
+  boxes.forEach(function (cb) {
+    var li = cb.closest('li');
+    var text = (li ? li.textContent : '').trim();
+    var n = counts[text] = (counts[text] || 0) + 1;
+    var key = text + '#' + n;
+    if (Object.prototype.hasOwnProperty.call(saved, key)) cb.checked = !!saved[key];
+    cb.addEventListener('change', function () {
+      saved[key] = cb.checked;
+      try { localStorage.setItem(storeKey, JSON.stringify(saved)); } catch (e) {}
+    });
+  });
+})();
+</script>
 </body>
 </html>
